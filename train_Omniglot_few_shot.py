@@ -71,8 +71,9 @@ relation_scheduler = StepLR(relation_optim, step_size=100000, gamma=0.5)
 criterion = nn.MSELoss().cuda()
 
 last_accuracy = 0.0
+print("Start Training")
 for episode in range(TRAINING_EPISODE):
-    print("Start Training")
+
     transform = transforms.Compose([
         random.choice([
             transforms.RandomRotation([90, 90]),
@@ -117,7 +118,7 @@ for episode in range(TRAINING_EPISODE):
 
     if (episode + 1) % 100 == 0:
         print("Training Episode:{}/{}        loss:{}".format(episode+1, TRAINING_EPISODE, float(loss.item())))
-    if (episode + 1) % 500 == 0:
+    if (episode + 1) % 5000 == 0:
         print("Testing....")
         total_rewards = 0
 
@@ -165,4 +166,4 @@ for episode in range(TRAINING_EPISODE):
 
             last_accuracy = test_accuracy
 
-
+        print("Start Training")
