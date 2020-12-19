@@ -115,8 +115,8 @@ for episode in range(TRAINING_EPISODE):
     relation_scheduler.step()
 
     if (episode + 1) % 100 == 0:
-        print("Episode:{}/{}        loss{}".format(episode+1, TRAINING_EPISODE, float(loss.item())))
-    if (episode + 1) % 10000 == 0:
+        print("Training Episode:{}/{}        loss:{}".format(episode+1, TRAINING_EPISODE, float(loss.item())))
+    if (episode + 1) % 5000 == 0:
         print("Testing....")
         total_rewards = 0
 
@@ -151,7 +151,8 @@ for episode in range(TRAINING_EPISODE):
 
             total_rewards += np.sum(rewards)
             test_accuracy = total_rewards / 1.0 / N_WAY / K_SHOT / TESTING_EPISODE
-            print("test accuracy:", test_accuracy)
+            if (i + 1) % 100 == 0:
+                print("Test accuracy:", test_accuracy)
             if test_accuracy > last_accuracy:
 
                 # save networks
