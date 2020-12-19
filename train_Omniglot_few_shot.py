@@ -1,3 +1,7 @@
+import os, sys
+current_dir = os.path.abspath(os.path.dirname(__file__))
+sys.path.append(current_dir)
+
 import math
 import torch
 import random
@@ -66,12 +70,9 @@ relation_optim = Adam(relation.parameters(), lr=LEARNING_RATE)
 relation_scheduler = StepLR(relation_optim, step_size=100000, gamma=0.5)
 criterion = nn.MSELoss().cuda()
 
-
-print("Start Training")
 last_accuracy = 0.0
-
 for episode in range(TRAINING_EPISODE):
-
+    print("Start Training")
     transform = transforms.Compose([
         random.choice([
             transforms.RandomRotation([90, 90]),
@@ -116,7 +117,7 @@ for episode in range(TRAINING_EPISODE):
 
     if (episode + 1) % 100 == 0:
         print("Training Episode:{}/{}        loss:{}".format(episode+1, TRAINING_EPISODE, float(loss.item())))
-    if (episode + 1) % 5000 == 0:
+    if (episode + 1) % 500 == 0:
         print("Testing....")
         total_rewards = 0
 
@@ -150,17 +151,18 @@ for episode in range(TRAINING_EPISODE):
             rewards = [1 if predict_labels[j]==query_label[j] else 0 for j in range(N_WAY*K_SHOT)]
 
             total_rewards += np.sum(rewards)
-            test_accuracy = total_rewards / 1.0 / N_WAY / K_SHOT / TESTING_EPISODE
-            if (i + 1) % 100 == 0:
-                print("Test accuracy:", test_accuracy)
-            if test_accuracy > last_accuracy:
 
-                # save networks
-                torch.save(embed.state_dict(),str("./model/omniglot_feature_encoder_" + str(N_WAY) +"way_" + str(K_SHOT) +"shot.pkl"))
-                torch.save(relation.state_dict(),str("./model/omniglot_relation_network_"+ str(N_WAY) +"way_" + str(K_SHOT) +"shot.pkl"))
+        test_accuracy = total_rewards / 1.0 / N_WAY / K_SHOT / TESTING_EPISODE
+        print("Test accuracy:", test_accuracy)
 
-                print("save networks for episode:", episode)
+        if test_accuracy > last_accuracy:
 
-                last_accuracy = test_accuracy
+            # save networks
+            torch.save(embed.state_dict(),str("./model/omniglot_feature_encoder_" + str(N_WAY) +"way_" + str(K_SHOT) +"shot.pkl"))
+            torch.save(relation.state_dict(),str("./model/omniglot_relation_network_"+ str(N_WAY) +"way_" + str(K_SHOT) +"shot.pkl"))
+
+            print("save networks for episode:", episode)
+
+            last_accuracy = test_accuracy
 
 
