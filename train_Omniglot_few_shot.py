@@ -13,7 +13,7 @@ from torch.nn.functional import one_hot
 from torch.optim.lr_scheduler import StepLR
 from torchvision import transforms
 from torch.utils.data import DataLoader
-from preprocess import split_train_test
+from data.preprocess import split_train_test
 from torch.utils.tensorboard import SummaryWriter
 from data.Omniglot import Omniglot
 from data.OmniglotTask import OmniglotTask
@@ -165,13 +165,13 @@ for episode in range(TRAINING_EPISODE):
             out = relation(concat_feature).view(-1, N_WAY)
             _, predict_labels = torch.max(out.data, 1)
             rewards = [1 if predict_labels[j]==query_label[j] else 0 for j in range(N_WAY*K_SHOT)]
-            rewards_list.append(rewards)
+            rewards_list.append(np.sum(rewards))
             total_rewards += np.sum(rewards)
 
         test_accuracy = total_rewards / 1.0 / N_WAY / K_SHOT / TESTING_EPISODE
         print("Test accuracy:", test_accuracy)
         print("reward list:", rewards_list)
-        writer.add_scalar("Test/Accuracy", test_accuracy, episode)
+        writer.add_scalar("Test/Accuracy", test_accuracy, episode+1)
         if test_accuracy > last_accuracy:
 
             # save networks

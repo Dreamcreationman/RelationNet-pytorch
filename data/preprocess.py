@@ -31,4 +31,4 @@ def split_train_test(root_dir, train_size=1200):
                     for character in os.listdir(os.path.join(root_dir, "data", alphabet))]
     random.seed(1)
     random.shuffle(class_folder)
-    return class_folder, class_folder[:train_size], class_folder[train_size:]
+    return class_folder[:train_size], class_folder[train_size:]
