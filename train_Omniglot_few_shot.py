@@ -13,6 +13,8 @@ from torch.nn.functional import one_hot
 from torch.optim.lr_scheduler import StepLR
 from torchvision import transforms
 from torch.utils.data import DataLoader
+from preprocess import split_train_test
+from torch.utils.tensorboard import SummaryWriter
 from data.Omniglot import Omniglot
 from data.OmniglotTask import OmniglotTask
 from model.model import EmbeddingBlock, RelationBlock
@@ -41,7 +43,11 @@ K_SHOT = args.k_shot
 LEARNING_RATE = args.learning_rate
 NUM_FEATURES = args.num_features
 FC_DIM = args.fc_dim
-
+tensorboard_log =  "tensorboard/"
+if not os.path.exists(tensorboard_log):
+    os.mkdir(tensorboard_log)
+writer = SummaryWriter(tensorboard_log)
+meta_train_folder, meta_test_class = split_train_test(ROOT_DIR)
 
 def weights_init(m):
     classname = m.__class__.__name__
@@ -63,6 +69,9 @@ def weights_init(m):
 print("Defining network parameters")
 embed = EmbeddingBlock(in_channels=1, num_features=NUM_FEATURES).apply(weights_init).cuda()
 relation = RelationBlock(num_features=NUM_FEATURES, fc_dim=FC_DIM).apply(weights_init).cuda()
+embed_para = sum(param.numel() for param in embed.parameters())
+relation_para = sum(param.numel() for param in relation.parameters())
+print('Number of parameters:', embed_para+relation_para)
 
 embed_optim = Adam(embed.parameters(), lr=LEARNING_RATE)
 embed_scheduler = StepLR(embed_optim, step_size=100000, gamma=0.5)
@@ -85,7 +94,7 @@ for episode in range(TRAINING_EPISODE):
         transforms.Normalize(mean=[0.92206],
                              std=[0.08426])
     ])
-    task = OmniglotTask(ROOT_DIR, meta_train=True, num_class=N_WAY, num_shot=K_SHOT, num_query=NUM_QUERY)
+    task = OmniglotTask(meta_train_folder, num_class=N_WAY, num_shot=K_SHOT, num_query=NUM_QUERY)
     support_dataset = Omniglot(task=task, support=True, transfrom=transform)
     query_dataset = Omniglot(task=task, support=False, transfrom=transform)
     support_loader = DataLoader(support_dataset, batch_size=task.num_class * task.num_shot, shuffle=False)
@@ -111,19 +120,25 @@ for episode in range(TRAINING_EPISODE):
     embed_optim.zero_grad()
     relation_optim.zero_grad()
     loss.backward()
+
+    torch.nn.utils.clip_grad_norm(embed.parameters(), 0.5)
+    torch.nn.utils.clip_grad_norm(relation.parameters(), 0.5)
+
+    embed_scheduler.step(episode)
+    relation_scheduler.step(episode)
     embed_optim.step()
     relation_optim.step()
-    embed_scheduler.step()
-    relation_scheduler.step()
 
     if (episode + 1) % 100 == 0:
         print("Training Episode:{}/{}        loss:{}".format(episode+1, TRAINING_EPISODE, float(loss.item())))
+        writer.add_scalar("Training Loss", loss.item(), episode+1)
+
     if (episode + 1) % 5000 == 0:
         print("Testing....")
         total_rewards = 0
-
+        rewards_list = []
         for i in range(TESTING_EPISODE):
-            task = OmniglotTask(ROOT_DIR, meta_train=False, num_class=N_WAY, num_shot=K_SHOT, num_query=K_SHOT)
+            task = OmniglotTask(meta_test_class, num_class=N_WAY, num_shot=K_SHOT, num_query=K_SHOT)
             support_dataset = Omniglot(task=task, support=True, transfrom=transform)
             query_dataset = Omniglot(task=task, support=False, transfrom=transform)
             support_loader = DataLoader(support_dataset, batch_size=task.num_class * task.num_shot, shuffle=False)
@@ -150,12 +165,13 @@ for episode in range(TRAINING_EPISODE):
             out = relation(concat_feature).view(-1, N_WAY)
             _, predict_labels = torch.max(out.data, 1)
             rewards = [1 if predict_labels[j]==query_label[j] else 0 for j in range(N_WAY*K_SHOT)]
-
+            rewards_list.append(rewards)
             total_rewards += np.sum(rewards)
 
         test_accuracy = total_rewards / 1.0 / N_WAY / K_SHOT / TESTING_EPISODE
         print("Test accuracy:", test_accuracy)
-
+        print("reward list:", rewards_list)
+        writer.add_scalar("Test/Accuracy", test_accuracy, episode)
         if test_accuracy > last_accuracy:
 
             # save networks
