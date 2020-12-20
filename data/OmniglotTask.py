@@ -20,8 +20,7 @@ class OmniglotTask():
         self.query_root = []
         for t in self.tasks:
             temp = [os.path.join(t, dir) for dir in os.listdir(t)]
-            random.seed(1)
-            random.shuffle(temp)
+            temp = random.sample(temp, len(temp))
             self.support_root += temp[:self.num_shot]
             self.query_root += temp[self.num_shot: self.num_shot+self.num_query]
         self.support_labels = [self.labels["-".join((s.split("/")[-3], s.split("/")[-2]))] for s in self.support_root]

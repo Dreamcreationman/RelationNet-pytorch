@@ -4,12 +4,11 @@ from torch.utils.data import Dataset
 
 class Omniglot(Dataset):
 
-    def __init__(self, task, support=True, num_image=5, transfrom=None, target_transform=None):
+    def __init__(self, task, support=True, transfrom=None, target_transform=None):
         super(Omniglot, self).__init__()
         self.task = task
         self.transform = transfrom
         self.target_transform = target_transform
-        self.num_image = num_image
         self.images = self.task.support_root if support else self.task.query_root
         self.labels = self.task.support_labels if support else self.task.query_labels
 
